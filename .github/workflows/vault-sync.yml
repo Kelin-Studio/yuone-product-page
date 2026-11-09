@@ -1,0 +1,104 @@
+# Kelin Studio — vault sync
+# Drop this into each project repo at: .github/workflows/vault-sync.yml
+# On every push it records what changed into the Obsidian vault repo.
+#
+# Requires (set once, see docs/github-transfer-checklist.md):
+#   secret  VAULT_SYNC_TOKEN   PAT/App token with contents:write on the vault repo
+#   secret  ANTHROPIC_API_KEY  (optional) enables Claude-written summaries
+#   var     LLM_ENDPOINT       (optional) OpenAI-compatible local LLM URL (overrides Anthropic)
+#   var     LLM_MODEL          (optional) model name
+#
+# The vault repo is referenced below — update if the name/owner differs.
+
+name: Vault sync
+
+on:
+  push:
+    branches-ignore: []   # run on all branches; narrow to [main, master] if you prefer
+
+concurrency:
+  group: vault-sync-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    # Skip pushes made by the sync bot itself
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    steps:
+      - name: Checkout this repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # need history to diff the push range
+
+      - name: Gather push metadata
+        id: meta
+        shell: bash
+        run: |
+          set -e
+          BEFORE="${{ github.event.before }}"
+          AFTER="${{ github.sha }}"
+          # First push to a branch reports an all-zero "before"
+          if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            RANGE_BEFORE=$(git rev-list --max-parents=0 "$AFTER" | tail -1)
+          else
+            RANGE_BEFORE="$BEFORE"
+          fi
+          # changed files
+          git diff --name-only "$RANGE_BEFORE" "$AFTER" > /tmp/files.txt || true
+          # commits -> JSON. Use ASCII Unit Separator (0x1F) as field delimiter;
+          # git emits it from the %x1f format token, node splits on char code 31.
+          git log --pretty=format:'%H%x1f%h%x1f%an%x1f%ad%x1f%s' --date=short "$RANGE_BEFORE".."$AFTER" > /tmp/raw.txt || true
+          node -e '
+            const fs=require("fs");
+            const SEP=String.fromCharCode(31);
+            const lines=fs.readFileSync("/tmp/raw.txt","utf8").split("\n").filter(Boolean);
+            const out=lines.map(l=>{const[sha,short,author,date,...m]=l.split(SEP);
+              return {sha,short,author,date,message:m.join(SEP)};});
+            fs.writeFileSync("/tmp/commits.json",JSON.stringify(out));
+          '
+          echo "before=$RANGE_BEFORE" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout vault
+        uses: actions/checkout@v4
+        with:
+          repository: Kelin-Studio/kelin-studio-vault
+          token: ${{ secrets.VAULT_SYNC_TOKEN }}
+          path: _vault
+          fetch-depth: 1
+
+      - name: Write notes
+        env:
+          VAULT_DIR: _vault
+          REPO_FULL: ${{ github.repository }}
+          REPO_NAME: ${{ github.event.repository.name }}
+          OWNER: ${{ github.repository_owner }}
+          BRANCH: ${{ github.ref_name }}
+          ACTOR: ${{ github.actor }}
+          COMPARE_URL: ${{ github.event.compare }}
+          COMMITS_JSON: /tmp/commits.json
+          FILES_TXT: /tmp/files.txt
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          LLM_ENDPOINT: ${{ vars.LLM_ENDPOINT }}
+          LLM_MODEL: ${{ vars.LLM_MODEL }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+        run: node _vault/.sync/summarize.mjs
+
+      - name: Commit & push to vault
+        shell: bash
+        working-directory: _vault
+        run: |
+          set -e
+          git config user.name  "kelin-vault-sync"
+          git config user.email "actions@users.noreply.github.com"
+          if git diff --quiet && git diff --cached --quiet; then
+            echo "No vault changes."; exit 0
+          fi
+          git add -A
+          git commit -m "vault-sync: ${{ github.repository }} @ ${{ github.ref_name }} (${{ github.sha }})"
+          # Other repos may push concurrently — rebase-retry a few times.
+          for i in 1 2 3 4 5; do
+            if git push; then echo "pushed"; exit 0; fi
+            echo "push failed, rebasing (attempt $i)"; git pull --rebase --autostash || true
+          done
+          echo "vault push failed after retries"; exit 1
