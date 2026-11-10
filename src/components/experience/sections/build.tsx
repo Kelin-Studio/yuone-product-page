@@ -5,6 +5,7 @@ import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { EYEBROW, TITLE, sectionTimeline, vf } from "../beats";
 import { embed, showAddress } from "../embed";
+import { ArButton } from "./ar-button";
 import {
   FEATURE_SLOTS,
   FRAMES,
@@ -300,16 +301,10 @@ export function BuildSection() {
             >
               {copied ? "Link copied" : "Copy link to this build"}
             </button>
-            <a
-              rel="ar"
-              href="/models/yu-one.usdz"
+            <ArButton
+              build={b}
               className="rounded-full border border-white/25 px-5 py-2.5 font-brand text-[13px] text-white transition hover:border-white/60"
-            >
-              {/* iOS Quick Look needs an image as the link's first child */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/yu-one.png" alt="" className="hidden" />
-              See it in AR
-            </a>
+            />
           </div>
         </div>
 
