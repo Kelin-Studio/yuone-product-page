@@ -205,6 +205,47 @@ function buildKit(root: THREE.Group, scene: THREE.Object3D, textures: Record<Gar
   return { bars, ends, slots, n: 3, started: false };
 }
 
+/**
+ * The frame and its modules for one build, at rest: clicked in, Flex folded,
+ * no laundry. The same layout KitRack eases towards, for the AR export.
+ */
+export function posedKit(scene: THREE.Object3D, frame: FrameType, slots: ModuleType[]) {
+  const source = restyle(scene.clone(true));
+  const pick = (name: string) => {
+    const node = source.getObjectByName(name);
+    if (!node) throw new Error(`parts kit is missing ${name}`);
+    return node.clone(true);
+  };
+  const root = new THREE.Group();
+  root.name = "part:frame";
+  const n = slots.length;
+
+  const bars = pick("Kit_Bars_3");
+  bars.scale.z = (SLOT * n + 0.065) / BARS_3_LENGTH;
+  root.add(bars);
+
+  const shift = (n - 3) * (SLOT / 2);
+  if (frame !== "core") {
+    const ends = frame === "plus" ? ["Kit_EndsDuo_A", "Kit_EndsDuo_B"] : ["Kit_EndsFlex_A", "Kit_EndsFlex_B"];
+    const a = pick(ends[0]);
+    const b = pick(ends[1]);
+    a.position.z = -shift;
+    b.position.z = shift;
+    root.add(a, b);
+  }
+
+  slots.forEach((type, k) => {
+    const part = pick(NODE[type]);
+    const arm = part.getObjectByName("Kit_Flex_Arm");
+    if (arm) arm.rotation.x = 0;
+    const slot = new THREE.Group();
+    slot.position.z = ((n - 1) / 2 - k) * SLOT;
+    slot.add(part);
+    root.add(slot);
+  });
+  return root;
+}
+
 const GARMENT_URLS = Object.fromEntries(Object.entries(GARMENT).map(([k, v]) => [k, v.url])) as Record<GarmentName, string>;
 
 /**
