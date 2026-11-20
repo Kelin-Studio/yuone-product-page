@@ -5,6 +5,7 @@ import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { EYEBROW, TITLE, sectionTimeline, vf } from "../beats";
 import { embed, showAddress } from "../embed";
+import { track } from "../track";
 import { ArButton } from "./ar-button";
 import {
   FEATURE_SLOTS,
@@ -122,6 +123,7 @@ export function BuildSection() {
   const setFeature = (i: number, f: FeatureSlot) => build.set({ features: b.features.map((s, k) => (k === i ? f : s)) });
 
   const share = async () => {
+    track("product_3d_share", { content_id: encodeBuild(b) }, "share");
     // embedded on the store, the link is to the store's page, not to this frame
     const url = new URL(embed.hostUrl ?? window.location.href);
     if (embed.hostUrl) url.searchParams.set("rack", encodeBuild(b));

@@ -16,6 +16,8 @@
  *   frame → host   { source: "yu-one", type: "height", height }   px, the section's height
  *   frame → host   { source: "yu-one", type: "scroll-to", y, smooth }  an in-page link, as px into the section
  *   frame → host   { source: "yu-one", type: "address", url }    a share link for the host's address bar
+ *   frame → host   { source: "yu-one", type: "track", event, params, ads }  an analytics event for the
+ *                                                                   store's own tags (track.ts)
  *
  * Until a host says hello the page scrolls itself as before, so it works in
  * any iframe, and on its own.
@@ -41,6 +43,18 @@ let origin: string | null = null;
 const post = (message: Record<string, unknown>) => {
   if (origin) window.parent.postMessage({ source: "yu-one", ...message }, origin);
 };
+
+/** Analytics sent before the host said hello, held until it does. */
+const held: Record<string, unknown>[] = [];
+
+/**
+ * Pass an analytics event to the host page, which sends it with the store's
+ * own tags (track.ts). On its own, outside a host, the page reports nothing.
+ */
+export function report(message: Record<string, unknown>) {
+  if (origin) post(message);
+  else if (window.self !== window.top && held.length < 60) held.push(message);
+}
 
 /** Where an element starts, in px from the top of this page (= into the host's section). */
 const topOf = (el: Element) => el.getBoundingClientRect().top + window.scrollY;
@@ -91,6 +105,7 @@ export function startEmbed() {
         observer.observe(document.body);
         post({ type: "ready" });
         sendHeight();
+        held.splice(0).forEach(post);
         // a shared link that opens on a section (#build)
         if (window.location.hash) jumpTo(window.location.hash, false);
       }
