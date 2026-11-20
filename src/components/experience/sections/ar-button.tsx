@@ -153,7 +153,15 @@ export function ArButton({ build, className }: { build: Build; className: string
   const label = busy ? "Preparing…" : failed ? "Try again" : mode === "download" ? "Download 3D model" : "See it in AR";
 
   return (
-    <a ref={self} rel={mode === "quicklook" ? "ar" : undefined} href={ready ?? "#"} onClick={onClick} className={className} aria-busy={busy}>
+    <a
+      ref={self}
+      rel={mode === "quicklook" ? "ar" : undefined}
+      href={ready ?? "#"}
+      onClick={onClick}
+      className={className}
+      aria-busy={busy}
+      data-track={`ar_${mode}`}
+    >
       {/* AR Quick Look needs an image as the link's first child */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/yu-one.png" alt="" className="hidden" />

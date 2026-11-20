@@ -39,6 +39,7 @@ function Switch({ name, note, on, disabled, onChange }: { name: string; note: st
       aria-checked={on}
       disabled={disabled}
       onClick={onChange}
+      data-track={`control_${name.toLowerCase().replace(/\W+/g, "_")}`}
       className="flex w-full items-center justify-between gap-3 rounded-2xl bg-white/[0.06] px-4 py-2 text-left transition hover:bg-white/[0.1] disabled:cursor-not-allowed disabled:hover:bg-white/[0.06] sm:py-2.5"
     >
       <span>
@@ -63,6 +64,7 @@ function Key({ label, glyph, disabled, onClick }: { label: string; glyph: string
       type="button"
       disabled={disabled}
       onClick={onClick}
+      data-track={`lift_${label.toLowerCase()}`}
       className="flex flex-col items-center gap-0.5 rounded-xl bg-white/[0.1] py-2 font-brand text-[11px] text-white transition hover:bg-white/[0.16] active:bg-[#F0765A] disabled:opacity-40 disabled:hover:bg-white/[0.1]"
     >
       <span aria-hidden className="font-display text-[15px] leading-none">
@@ -145,6 +147,7 @@ function Panel({ state }: { state: ControlState }) {
               aria-checked={state.light === l.key}
               disabled={scheduled}
               onClick={() => control.set({ light: l.key })}
+              data-track={`light_${l.key}`}
               className={`flex-1 rounded-full px-2 py-1.5 font-brand text-[12px] transition disabled:opacity-60 ${
                 state.light === l.key ? "bg-[#efe7da] text-[#16171b]" : "text-white/70 hover:text-white"
               }`}

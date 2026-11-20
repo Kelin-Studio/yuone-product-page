@@ -57,3 +57,20 @@ It works in a theme preview (`?preview_theme_id=…` on yuhome.com.sg, or the
 
 The experience still works in a plain iframe: it then scrolls inside the frame
 as before, and the header will not react to it.
+
+## Analytics
+
+The experience reports what visitors do (chapters reached, the build they
+settle on, AR, share links, buttons, the product loading) to this snippet,
+which sends it with the store's own tags: GA4 `G-C30L2ECJ0J` through the
+Google channel app's `gtag` (the same visitor and visit as the page around the
+frame), GTM's `dataLayer`, and for a few key moments the Meta and TikTok
+pixels as a custom `Product3D` event. Event names and parameters are listed at
+the top of `src/components/experience/track.ts`.
+
+**Buy now** carries `yu3d=buy_now` in its address, because the store's GA4
+tag holds events for about five seconds and a click event would be lost with
+the page. In GA4, read it from the product page's **Page location**.
+
+An older copy of this snippet ignores the analytics messages, and the page
+works as before.

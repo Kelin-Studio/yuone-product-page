@@ -107,6 +107,49 @@
     }, 300);
     frame.addEventListener("load", hello);
 
+    // what visitors do in the frame, sent with the store's own tags so it joins the same visit:
+    // GA4 through the Google channel app's gtag, GTM's dataLayer, and for a few key moments the
+    // Meta and TikTok pixels. Held until the store's GA4 tag is up (it loads after the page).
+    // Events and parameters: src/components/experience/track.ts in yuone-product-page.
+    const GA4 = "G-C30L2ECJ0J";
+    const NAME = /^[a-z][a-z0-9_]{0,39}$/;
+    const waiting = [];
+    let waitingSince = 0;
+    const tagReady = () => !!(window.google_tag_manager && window.google_tag_manager[GA4]);
+    const deliver = (data) => {
+      const params = {};
+      const raw = data.params || {};
+      Object.keys(raw).forEach((k) => {
+        const v = raw[k];
+        if (!NAME.test(k)) return;
+        if (typeof v === "string") params[k] = v.slice(0, 100);
+        else if (typeof v === "number" && isFinite(v)) params[k] = v;
+      });
+      window.dataLayer = window.dataLayer || [];
+      window.dataLayer.push(Object.assign({ event: data.event }, params));
+      const gtag = typeof window.gtag === "function" ? window.gtag : function () { window.dataLayer.push(arguments); };
+      gtag("event", data.event, Object.assign({ send_to: GA4 }, params));
+      if (typeof data.ads === "string" && NAME.test(data.ads)) {
+        const ad = { product: params.content_type, action: data.ads };
+        try { if (typeof window.fbq === "function") window.fbq("trackCustom", "Product3D", ad); } catch (err) {}
+        try { if (window.ttq && typeof window.ttq.track === "function") window.ttq.track("Product3D", ad); } catch (err) {}
+      }
+    };
+    const flush = () => {
+      // send anyway after 10 s: gtag queues for its tag if it is still on the way
+      if (!tagReady() && performance.now() - waitingSince < 10000) return window.setTimeout(flush, 250);
+      waiting.splice(0).forEach(deliver);
+    };
+    const forward = (data) => {
+      if (typeof data.event !== "string" || !NAME.test(data.event)) return;
+      if (tagReady() && !waiting.length) return deliver(data);
+      if (!waiting.length) {
+        waitingSince = performance.now();
+        window.setTimeout(flush, 250);
+      }
+      if (waiting.length < 100) waiting.push(data);
+    };
+
     window.addEventListener("message", (e) => {
       if (e.origin !== ORIGIN || e.source !== frame.contentWindow) return;
       const data = e.data;
@@ -129,6 +172,8 @@
         // a share link, where the frame could not reach the clipboard
         const url = new URL(data.url, window.location.href);
         if (url.origin === window.location.origin) window.history.replaceState(null, "", url);
+      } else if (data.type === "track") {
+        forward(data);
       }
     });
 

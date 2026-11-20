@@ -17,6 +17,7 @@ import { chooseMode } from "./quality";
 import { settleRig, tickRig } from "./rig";
 import { SECTIONS, render, stage } from "./stage";
 import { STILL_AT, STILL_SETS, Stills, StillsNote } from "./stills";
+import { startTracking, trackLoad } from "./track";
 
 gsap.registerPlugin(ScrollTrigger, useGSAP);
 
@@ -45,11 +46,15 @@ export function Experience() {
   // embedded on the store, the store's page owns the scroll (embed.ts)
   useEffect(() => startEmbed(), []);
 
+  // what visitors do, for the store's analytics (track.ts)
+  useEffect(() => startTracking(), []);
+
   /** Called once the GLB is decoded and mounted in the canvas, or the first still has loaded. */
   const onSceneReady = useCallback(() => {
     if (revealed.current || !root.current) return;
     revealed.current = true;
     stage.ready = true;
+    trackLoad(render.get().mode);
     const q = gsap.utils.selector(root.current);
     const tl = gsap
       .timeline({ defaults: { ease: "power2.out" } })

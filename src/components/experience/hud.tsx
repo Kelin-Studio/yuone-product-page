@@ -157,6 +157,7 @@ export function Hud() {
           href={STORE_URL}
           // the page is embedded in an iframe on yuhome.com.sg: open the store in the parent tab, not the frame
           target="_top"
+          data-track="buy_now"
           className="pointer-events-auto relative inline-flex items-center gap-2 rounded-full bg-[#F0765A] px-4 py-2 font-brand text-[13px] font-semibold text-white shadow-[0_12px_32px_rgba(240,118,90,0.35)] transition hover:bg-[#ff8a6e] md:px-5 md:py-2.5"
         >
           <svg aria-hidden viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" className="size-4">
@@ -203,6 +204,7 @@ export function Hud() {
         type="button"
         onClick={toggle}
         aria-pressed={sound}
+        data-track={sound ? "sound_off" : "sound_on"}
         className="pointer-events-auto absolute bottom-[3svh] right-4 flex items-center gap-2 font-display uppercase opacity-70 transition-opacity hover:opacity-100 md:right-[1.6vw]"
         style={{ ...vf(400, 105), fontSize: "0.6rem", letterSpacing: "0.26em" }}
       >

@@ -119,6 +119,7 @@ export function StillsNote() {
       <button
         type="button"
         onClick={forceLive}
+        data-track="show_in_3d"
         className="rounded-full bg-white/10 px-3 py-1 text-white transition hover:bg-white/20"
       >
         Show live 3D
